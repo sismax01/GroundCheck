@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GroundCheck — Evidence-Grounded Research & RAG Evaluation Workbench</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="brand-group">
+      <div class="brand-logo" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="m9 12 2 2 4-4"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title-row">
+          <span class="brand-name">GroundCheck</span>
+          <span class="version-pill" id="app-version-pill">v1.0.0</span>
+        </div>
+        <p class="brand-subtitle">Inspectable Document Research, Claim Verification &amp; Reproducible RAG Evaluation</p>
+      </div>
+    </div>
+
+    <nav class="main-tabs" role="tablist" aria-label="GroundCheck Views">
+      <button class="tab-btn active" data-tab="research" role="tab" aria-selected="true">
+        <span class="tab-icon">&#128269;</span> Research &amp; Evidence Q&amp;A
+      </button>
+      <button class="tab-btn" data-tab="corpus" role="tab" aria-selected="false">
+        <span class="tab-icon">&#128196;</span> Document Corpus <span class="badge-count" id="nav-doc-count">0</span>
+      </button>
+      <button class="tab-btn" data-tab="evaluation" role="tab" aria-selected="false">
+        <span class="tab-icon">&#128202;</span> Evaluation &amp; Benchmarks <span class="badge-count" id="nav-eval-count">0</span>
+      </button>
+    </nav>
+
+    <div class="header-actions">
+      <div class="mode-indicator" id="header-mode-indicator" title="Active answer synthesis mode">
+        <span class="status-dot dot-local"></span>
+        <span id="header-mode-text">Local Extractive Mode ($0.00)</span>
+      </div>
+      <button class="icon-btn" id="theme-toggle-btn" title="Toggle Dark/Light Theme" aria-label="Toggle theme">
+        &#9728;
+      </button>
+    </div>
+  </header>
+
+  <!-- Global Notification Toast -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- =======================================================================
+       TAB 1: RESEARCH & EVIDENCE-GROUNDED Q&A WORKBENCH
+       ======================================================================= -->
+  <main id="tab-research" class="tab-panel active">
+    <div class="workbench-grid">
+      <!-- Left Column: Controls, Presets, Corpus Filter & Recent Queries -->
+      <aside class="sidebar-panel">
+        <div class="panel-card">
+          <div class="card-header">
+            <h2>Retrieval &amp; Grounding Controls</h2>
+          </div>
+          <div class="control-group">
+            <label for="select-retrieval-mode">Retrieval Strategy</label>
+            <select id="select-retrieval-mode" class="input-select">
+              <option value="hybrid" selected>Hybrid (BM25 + Subword/N-gram Vector + RRF)</option>
+              <option value="bm25">Lexical Only (Okapi BM25)</option>
+              <option value="semantic">Semantic Vector Only (TF-IDF N-Gram Cosine)</option>
+            </select>
+          </div>
+
+          <div class="control-row-2">
+            <div class="control-group">
+              <label for="input-top-k">Top-K Passages: <strong id="label-top-k">5</strong></label>
+              <input type="range" id="input-top-k" min="1" max="10" step="1" value="5" />
+            </div>
+            <div class="control-group">
+              <label for="input-alpha">Lexical Weight (&alpha;): <strong id="label-alpha">0.55</strong></label>
+              <input type="range" id="input-alpha" min="0" max="1" step="0.05" value="0.55" />
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label for="input-min-score">Min Evidence Threshold (&tau;<sub>min</sub>): <strong id="label-min-score">0.18</strong></label>
+            <input type="range" id="input-min-score" min="0.05" max="0.60" step="0.01" value="0.18" />
+            <span class="control-hint">Passages below &tau;<sub>min</sub> are rejected to prevent unsupported answers.</span>
+          </div>
+
+          <div class="control-group">
+            <label for="select-gen-mode">Synthesis Engine</label>
+            <select id="select-gen-mode" class="input-select">
+              <option value="extractive" selected>Deterministic Local Extractive (Zero API Cost)</option>
+              <option value="llm">External OpenAI-Compatible LLM API</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="card-header">
+            <h2>Diagnostic Preset Queries</h2>
+            <span class="card-subtitle">Click to test grounding, conflicts &amp; abstention</span>
+          </div>
+          <div class="preset-list" id="preset-queries-list">
+            <button class="preset-chip" data-query="What are the calibrated valve ratios gamma_1 and gamma_2 in the non-minimum-phase QuadTank-FDI configuration, and what is the EKF sampling period?">
+              <span class="preset-tag tag-factual">Factual</span> QuadTank-FDI Valve Ratios &amp; EKF Period
+            </button>
+            <button class="preset-chip" data-query="How does BridgeTest construct the HMAC-SHA256 webhook signature and what replay tolerance window is enforced?">
+              <span class="preset-tag tag-factual">Factual</span> BridgeTest HMAC-SHA256 &amp; Replay Window
+            </button>
+            <button class="preset-chip" data-query="Under what failure rate and request volume does the webhook circuit breaker trip to OPEN, and what happens when a duplicate X-Bridge-Delivery-Id arrives in-flight?">
+              <span class="preset-tag tag-multihop">Multi-Hop</span> Circuit Breaker &amp; HTTP 409 Idempotency
+            </button>
+            <button class="preset-chip" data-query="What is the configured emergency pump shutdown timeout for the QuadTank-FDI controller?">
+              <span class="preset-tag tag-conflict">Conflict Test</span> Emergency Pump Shutdown Timeout (45ms vs 120ms)
+            </button>
+            <button class="preset-chip" data-query="What are the LoRaWAN frequency channel plans and BGP autonomous system peering policies for the satellite telemetry uplink?">
+              <span class="preset-tag tag-abstain">Abstention Test</span> Unanswerable Out-of-Corpus Query (LoRaWAN/BGP)
+            </button>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="card-header">
+            <h2>Recent Query Audit Log</h2>
+          </div>
+          <div id="recent-queries-list" class="history-list">
+            <p class="empty-muted">No queries executed yet.</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center Column: Question Input, Grounded Answer, Claim-by-Claim Audit -->
+      <section class="center-panel">
+        <div class="panel-card query-composer-card">
+          <form id="query-form">
+            <label for="question-input" class="sr-only">Ask a technical question about your documents</label>
+            <div class="composer-box">
+              <textarea
+                id="question-input"
+                rows="3"
+                placeholder="Ask a technical question about your uploaded documents (e.g., EKF innovation covariance, Raft election timeouts, webhook backoff, or test conflict detection)..."
+                required
+              ></textarea>
+              <div class="composer-footer">
+                <span class="composer-hint" id="active-corpus-hint">Searching across all indexed documents</span>
+                <button type="submit" class="btn-primary" id="ask-submit-btn">
+                  <span>Run Grounded Investigation</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Answer & Verification Result Container -->
+        <div id="query-result-container" class="result-stack">
+          <div class="empty-workbench-state">
+            <div class="empty-icon">&#128270;</div>
+            <h3>Inspectable Evidence-Based Question Answering</h3>
+            <p>
+              Select a diagnostic preset on the left or type any technical question above.
+              GroundCheck retrieves candidate passages using hybrid lexical + semantic search,
+              synthesizes an answer with verbatim <code>[doc_id::ch-XXX]</code> citations, and audits
+              every sentence for factual support and cross-document contradictions.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Retrieved Supporting Evidence Passages Inspector -->
+      <aside class="inspector-panel">
+        <div class="panel-card full-height-card">
+          <div class="card-header">
+            <h2>Supporting Evidence Inspector</h2>
+            <span class="card-subtitle" id="evidence-count-label">Click any citation to highlight</span>
+          </div>
+          <div id="retrieved-passages-list" class="passages-container">
+            <p class="empty-muted">Retrieved passages and their lexical/semantic score breakdowns will appear here after running a query.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- =======================================================================
+       TAB 2: DOCUMENT CORPUS & CHUNK INSPECTOR
+       ======================================================================= -->
+  <main id="tab-corpus" class="tab-panel">
+    <div class="corpus-layout">
+      <div class="corpus-sidebar">
+        <div class="panel-card">
+          <div class="card-header">
+            <h2>Upload Technical Document</h2>
+            <span class="card-subtitle">Supports .pdf, .md, .txt, .html (up to 25 MB)</span>
+          </div>
+          <form id="upload-form" class="upload-form">
+            <label for="file-upload-input" class="upload-dropzone" id="upload-dropzone">
+              <div class="dropzone-title">Choose a file or drag &amp; drop here</div>
+              <div class="dropzone-sub" id="selected-file-label">PDF, Markdown, Plain Text, or HTML</div>
+              <input type="file" id="file-upload-input" accept=".pdf,.md,.markdown,.txt,.html,.htm" />
+            </label>
+            <div class="upload-actions">
+              <button type="submit" class="btn-primary" id="upload-submit-btn">Upload &amp; Index Document</button>
+              <button type="button" class="btn-secondary" id="reseed-corpus-btn" title="Restore built-in reference technical corpus">
+                Restore Sample Corpus
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel-card">
+          <div class="card-header">
+            <h2>Indexed Document Library</h2>
+          </div>
+          <div id="corpus-doc-list" class="doc-list"></div>
+        </div>
+      </div>
+
+      <div class="corpus-viewer">
+        <div class="panel-card full-height-card" id="document-detail-view">
+          <div class="empty-workbench-state">
+            <div class="empty-icon">&#128196;</div>
+            <h3>Select a Document to Inspect Segmented Chunks</h3>
+            <p>Click any document in the library on the left to inspect its metadata, section hierarchy, token estimates, and exact searchable chunk boundaries.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- =======================================================================
+       TAB 3: AI EVALUATION & REPRODUCIBLE BENCHMARK DASHBOARD
+       ======================================================================= -->
+  <main id="tab-evaluation" class="tab-panel">
+    <div class="eval-container">
+      <!-- Top Banner: Epistemic Honesty & Methodology Disclosure -->
+      <div class="honesty-banner">
+        <div class="honesty-badge">REAL COMPUTED METRICS</div>
+        <div class="honesty-text">
+          <strong>Reproducible Evaluation Methodology:</strong> Every score on this dashboard is computed dynamically by executing the 10-case
+          <code>groundcheck_eval_v1.json</code> benchmark through the live retrieval, synthesis, and verification pipeline.
+          <strong>Measured Values</strong> (Precision@K, Recall@K, MRR, NDCG@K, Citation Support, Claim Groundedness, Abstention Accuracy, and Wall-Clock Latency)
+          are distinguished clearly from <strong>Estimated Values</strong> (Reference LLM API Cost projections based on token counts).
+        </div>
+      </div>
+
+      <!-- Experiment Runner Controls -->
+      <div class="panel-card eval-controls-card">
+        <div class="eval-controls-grid">
+          <div>
+            <h2>Run Reproducible Evaluation Experiment</h2>
+            <p class="card-subtitle">Test a single retrieval configuration or run a 3-way ablation study (BM25 vs. Semantic vs. Hybrid RRF)</p>
+          </div>
+          <div class="eval-form-inline">
+            <input type="text" id="eval-exp-name" class="input-text" placeholder="Optional experiment name..." />
+            <select id="eval-mode-select" class="input-select">
+              <option value="hybrid" selected>Hybrid (BM25 + Semantic + RRF)</option>
+              <option value="bm25">Lexical Only (BM25)</option>
+              <option value="semantic">Semantic Vector Only</option>
+            </select>
+            <select id="eval-topk-select" class="input-select">
+              <option value="3">Top-K = 3</option>
+              <option value="5" selected>Top-K = 5</option>
+              <option value="8">Top-K = 8</option>
+            </select>
+            <button class="btn-primary" id="run-single-eval-btn">Run Experiment</button>
+            <button class="btn-accent" id="run-ablation-suite-btn">Run 3-Way Ablation Suite</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards for Selected Run -->
+      <div id="eval-kpi-grid" class="kpi-grid"></div>
+
+      <!-- Experiment Comparison Table & Active Run Case Breakdown -->
+      <div class="eval-split-grid">
+        <div class="panel-card">
+          <div class="card-header">
+            <h2>Experiment Runs &amp; Ablation Comparison</h2>
+            <span class="card-subtitle">Click any experiment row to inspect its per-question breakdown below</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="eval-runs-table">
+              <thead>
+                <tr>
+                  <th>Experiment Name</th>
+                  <th>Mode</th>
+                  <th>Pass Rate <span class="tag-meas">Measured</span></th>
+                  <th>Recall@K <span class="tag-meas">Measured</span></th>
+                  <th>MRR <span class="tag-meas">Measured</span></th>
+                  <th>NDCG@K <span class="tag-meas">Measured</span></th>
+                  <th>Groundedness <span class="tag-meas">Measured</span></th>
+                  <th>Abstention Acc <span class="tag-meas">Measured</span></th>
+                  <th>p50 Latency <span class="tag-meas">Measured</span></th>
+                  <th>Ref LLM Cost <span class="tag-est">Est.</span></th>
+                </tr>
+              </thead>
+              <tbody id="eval-runs-tbody">
+                <tr><td colspan="10" class="empty-muted">No benchmark runs executed yet. Click "Run Experiment" or "Run 3-Way Ablation Suite" above.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="card-header">
+            <h2 id="active-run-cases-title">Per-Case Benchmark Breakdown</h2>
+            <span class="card-subtitle">Inspect individual test questions, expected evidence, retrieval recall, and epistemic verdicts</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="eval-cases-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Category</th>
+                  <th>Question &amp; Generated Answer Preview</th>
+                  <th>Expected</th>
+                  <th>Actual Verdict</th>
+                  <th>Recall@K</th>
+                  <th>MRR</th>
+                  <th>Term Cov.</th>
+                  <th>Groundedness</th>
+                  <th>Latency</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody id="eval-cases-tbody">
+                <tr><td colspan="11" class="empty-muted">Run or select an evaluation experiment to view case-by-case results.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metric Mathematical Definitions & Reference Guide -->
+      <div class="panel-card">
+        <div class="card-header">
+          <h2>Evaluation Metrics Methodology &amp; Mathematical Definitions</h2>
+          <span class="card-subtitle">Explicit formulas and epistemic boundaries for every metric reported by GroundCheck</span>
+        </div>
+        <div id="metrics-guide-grid" class="metrics-guide-grid"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

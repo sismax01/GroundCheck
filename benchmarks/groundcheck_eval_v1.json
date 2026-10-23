@@ -1,0 +1,97 @@
+{
+  "benchmark_id": "groundcheck_eval_v1",
+  "title": "GroundCheck Technical Retrieval, Groundedness & Epistemic Calibration Benchmark v1.0",
+  "description": "Repeatable 10-case evaluation suite testing exact lexical retrieval, semantic paraphrase matching, multi-hop synthesis, conflict detection across discrepant specs, and honest abstention on unsupported topics.",
+  "cases": [
+    {
+      "case_id": "GC-01",
+      "category": "factual",
+      "question": "What are the calibrated valve ratios gamma_1 and gamma_2 in the non-minimum-phase QuadTank-FDI configuration, and what is the EKF sampling period?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": ["doc-quadtank-fdi-control-spec"],
+      "expected_terms": ["0.43", "0.34", "50", "ms", "20", "hz"],
+      "rationale": "Tests exact extraction of multivariable control parameters and EKF sampling rate from Section 1 and Section 2 of the QuadTank-FDI spec."
+    },
+    {
+      "case_id": "GC-02",
+      "category": "factual",
+      "question": "How is the CUSUM fault detection threshold J_th calibrated in QuadTank-FDI, and what is the mean isolation latency for actuator gain degradation?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": ["doc-quadtank-fdi-control-spec"],
+      "expected_terms": ["14.5", "0.2", "420", "ms", "cusum"],
+      "rationale": "Tests retrieval of statistical fault detection thresholds (J_th = 14.5, FAR < 0.2%) and isolation latency (420 ms)."
+    },
+    {
+      "case_id": "GC-03",
+      "category": "factual",
+      "question": "How does BridgeTest construct the HMAC-SHA256 webhook signature and what replay tolerance window is enforced?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": ["doc-webhook-reliability-spec"],
+      "expected_terms": ["hmac", "sha256", "300", "seconds", "compare_digest"],
+      "rationale": "Tests lexical + semantic retrieval of cryptographic webhook verification rules and replay protection window."
+    },
+    {
+      "case_id": "GC-04",
+      "category": "factual",
+      "question": "What exponential backoff parameters and Dead-Letter Queue (DLQ) retention policies are used when webhook delivery fails?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": ["doc-webhook-reliability-spec"],
+      "expected_terms": ["900", "8", "14", "days", "dlq"],
+      "rationale": "Verifies retrieval of retry cap (900 seconds), max attempts (8), and DLQ retention (14 days)."
+    },
+    {
+      "case_id": "GC-05",
+      "category": "factual",
+      "question": "What are the Raft randomized election timeout bounds, heartbeat interval, and WAL group commit coalescing window?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": ["doc-distributed-consensus-storage"],
+      "expected_terms": ["150", "300", "50", "2.5", "crc32c"],
+      "rationale": "Tests multi-section retrieval across Raft leader election timers and Write-Ahead Log group commit settings."
+    },
+    {
+      "case_id": "GC-06",
+      "category": "factual",
+      "question": "Why does GroundCheck avoid relative min-max score normalization per query and how are numeric claims audited?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": ["doc-hybrid-rag-evaluation-guide"],
+      "expected_terms": ["rrf", "20", "65", "0.18", "coverage"],
+      "rationale": "Tests retrieval of GroundCheck's own hybrid RRF formula (k_rrf = 20) and 65% numeric fidelity penalty."
+    },
+    {
+      "case_id": "GC-07",
+      "category": "multi_hop",
+      "question": "Under what failure rate and request volume does the webhook circuit breaker trip to OPEN, and what happens when a duplicate X-Bridge-Delivery-Id arrives in-flight?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": ["doc-webhook-reliability-spec"],
+      "expected_terms": ["50", "20", "60", "409", "conflict"],
+      "rationale": "Requires combining evidence from Section 3 (idempotency HTTP 409 Conflict) and Section 4 (circuit breaker 50% failure rate across 20 requests)."
+    },
+    {
+      "case_id": "GC-08",
+      "category": "conflicting",
+      "question": "What is the configured emergency pump shutdown timeout for the QuadTank-FDI controller?",
+      "expected_behavior": "report_conflict",
+      "expected_doc_ids": ["doc-quadtank-fdi-control-spec", "doc-webhook-reliability-spec"],
+      "expected_terms": ["45", "120", "ms"],
+      "rationale": "Tests cross-document contradiction detection: QuadTank-FDI Section 4 specifies 45 ms (v2.1 Legacy Manual), whereas Webhook Reliability Section 4 Errata specifies 120 ms for Modbus-TCP gateways."
+    },
+    {
+      "case_id": "GC-09",
+      "category": "unanswerable",
+      "question": "What are theLoRaWAN frequency channel plans and BGP autonomous system peering policies for the satellite telemetry uplink?",
+      "expected_behavior": "abstain",
+      "expected_doc_ids": [],
+      "expected_terms": [],
+      "rationale": "Tests epistemic humility: neither LoRaWAN frequency plans nor BGP satellite peering appear anywhere in the technical corpus. The system must abstain."
+    },
+    {
+      "case_id": "GC-10",
+      "category": "unanswerable",
+      "question": "How many GPU tensor cores and FP8 quantization calibration steps are required to train the Vision Transformer backbone?",
+      "expected_behavior": "abstain",
+      "expected_doc_ids": [],
+      "expected_terms": [],
+      "rationale": "Tests out-of-domain AI terminology trap: although the corpus discusses RAG evaluation, it contains zero information about Vision Transformer GPU training or FP8 quantization."
+    }
+  ]
+}
