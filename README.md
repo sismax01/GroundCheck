@@ -5,7 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.92%2B-009688.svg)](https://fastapi.tiangolo.com/)
-
+[![GroundCheck CI](https://github.com/sismax01/GroundCheck/actions/workflows/ci.yml/badge.svg)](https://github.com/sismax01/GroundCheck/actions/workflows/ci.yml)
+ 
 GroundCheck is an open-source AI engineering platform that bridges **technical document research**, **evidence-grounded question answering**, and **systematic, repeatable RAG evaluation**.
 
 Unlike generic PDF chat wrappers that treat retrieved snippets as unverified context and silently hallucinate when evidence is missing, GroundCheck makes every answer inspectable at the sentence level:
